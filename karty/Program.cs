@@ -22,7 +22,7 @@
             */
 
             // Welcome screen
-            Console.WriteLine(@"Welcome to prsi-in-terminal!
+            Console.Write(@"Welcome to prsi-in-terminal!
 
 Controls:
     Left / Right arrow - select card
