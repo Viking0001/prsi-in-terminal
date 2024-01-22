@@ -255,7 +255,7 @@
         {
             Random random = new Random();
             int nahodnakarta = random.Next(0, balicek_karet.Length);
-            for (int n = 0; n < kolik; n++)
+            for (int n = 0; n < kolik && balicek_karet.Sum() != 0; n++)
             {
                 while (balicek_karet[nahodnakarta] == 0) { nahodnakarta = random.Next(0, balicek_karet.Length); }
                 balicek_karet[nahodnakarta] = 0;
