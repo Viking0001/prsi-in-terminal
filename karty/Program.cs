@@ -1,8 +1,7 @@
 ﻿namespace karty {
     internal class Program {
         static void Main(string[] args) {
-
-            Random random = new Random();
+            Random random = new();
 
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             //0 - červené ♥
@@ -24,17 +23,17 @@
 
 
 
-            string[] znaky = { "❤️", "🍀", "🌰", "🎱" };
-            int sirka = 10;   //10,8,4
-            int vyska = 7;   //7 ,5,3
-            int rychlosthrani = 500; //ms
+            string[] symbols = { "❤️", "🍀", "🌰", "🎱" };
+            int width = 10;   //10,8,4
+            int height = 7;   //7 ,5,3
+            int playingSpeed = 500; //ms
 
 
-            int[] balicek_karet = new int[(4 * 8) * 2];
+            int[] cardDefinitions = new int[(4 * 8) * 2]; // [n*2] = cardSymbolId, [n*2+1] = cardNumber
 
-            for (int n = 0; n < balicek_karet.Length / 2; n++) {
-                balicek_karet[n * 2] = (n / 8);
-                balicek_karet[n * 2 + 1] = (n % 8) + 7;
+            for (int n = 0; n < cardDefinitions.Length / 2; n++) {
+                cardDefinitions[n * 2] = (n / 8);
+                cardDefinitions[n * 2 + 1] = (n % 8) + 7;
             }
             int[] lizaci_balicek = Enumerable.Repeat(1, 32).ToArray();
             int[] odhazovaci_balicek = Enumerable.Repeat(0, 32).ToArray();
@@ -48,72 +47,73 @@
             lizaci_balicek[nahodnakarta] = 0;
             kartanastole = nahodnakarta;
             odhazovaci_balicek[nahodnakarta] = 1;
+            discardPile[randomCardPos] = 1;
 
-            LizniKartu(lizaci_balicek, hrac1_ruka, 4);
-            LizniKartu(lizaci_balicek, hrac2_ruka, 4);
-
-
-            int[] kartakurzor = new int[2];
-            int predtimkaret;
-            bool muzehrathrac1 = true;
-            bool muzehrathrac2 = true;
+            DrawCard(drawingStack, player1Hand, 4);
+            DrawCard(drawingStack, player2Hand, 4);
 
 
-            while (PocetKaretVRuce(hrac1_ruka) != 0 && PocetKaretVRuce(hrac2_ruka) != 0) {
-                if (PocetKaretVRuce(hrac1_ruka) > 10 || PocetKaretVRuce(hrac2_ruka) > 10) { sirka = 4; vyska = 3; } else if (PocetKaretVRuce(hrac1_ruka) > 5 || PocetKaretVRuce(hrac2_ruka) > 5) { sirka = 8; vyska = 5; } else { sirka = 10; vyska = 7; }
+            int[] cursorAndCard = new int[2]; // [0] = selected card pos in hand, [1] = placed card (from cardDefinitions)
+            int lastCardCount;
+            bool canPlayer1Play = true;
+            bool canPlayer2Play = true;
+
+
+            while (CardCountInHand(player1Hand) != 0 && CardCountInHand(player2Hand) != 0) {
+                if (CardCountInHand(player1Hand) > 10 || CardCountInHand(player2Hand) > 10) { width = 4; height = 3; } else if (CardCountInHand(player1Hand) > 5 || CardCountInHand(player2Hand) > 5) { width = 8; height = 5; } else { width = 10; height = 7; }
 
 
 
-                predtimkaret = PocetKaretVRuce(hrac2_ruka);
+                lastCardCount = CardCountInHand(player2Hand);
 
                 Console.Clear();
-                VypisStolu(kartanastole, balicek_karet, hrac1_ruka, hrac2_ruka, lizaci_balicek, vyska, sirka, znaky, pozicekurzoru, odhazovaci_balicek);
-                while (PocetKaretVRuce(hrac2_ruka) == predtimkaret && muzehrathrac1) {
-                    PokudJePotrebaMichej(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                    predtimkaret = PocetKaretVRuce(hrac2_ruka);
-                    kartakurzor = NactiSipku(pozicekurzoru, PocetKaretVRuce(hrac2_ruka), kartanastole, balicek_karet, hrac2_ruka, lizaci_balicek, odhazovaci_balicek);
-                    pozicekurzoru = kartakurzor[0];
-                    kartanastole = kartakurzor[1];
+                WriteCanvas(topmostCardOnDiscardPile, cardDefinitions, player1Hand, player2Hand, drawingStack, height, width, symbols, cursorPos, discardPile);
+                while (CardCountInHand(player2Hand) == lastCardCount && canPlayer1Play) {
+                    ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
+                    lastCardCount = CardCountInHand(player2Hand);
+                    cursorAndCard = ReadKey(cursorPos, CardCountInHand(player2Hand), topmostCardOnDiscardPile, cardDefinitions, player2Hand, drawingStack, discardPile);
+                    cursorPos = cursorAndCard[0];
+                    topmostCardOnDiscardPile = cursorAndCard[1];
                     Console.Clear();
-                    VypisStolu(kartanastole, balicek_karet, hrac1_ruka, hrac2_ruka, lizaci_balicek, vyska, sirka, znaky, pozicekurzoru, odhazovaci_balicek);
+                    WriteCanvas(topmostCardOnDiscardPile, cardDefinitions, player1Hand, player2Hand, drawingStack, height, width, symbols, cursorPos, discardPile);
 
                 }
-                PokudJePotrebaMichej(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                if (PocetKaretVRuce(hrac2_ruka) < predtimkaret) {
-                    if (kartanastole % 8 == 0) { LizniKartu(lizaci_balicek, hrac1_ruka, 2); muzehrathrac2 = false; } else if (kartanastole % 8 == 7) { muzehrathrac2 = false; } else if (kartanastole % 8 == 5) { kartanastole = (VyberKartyProHrace(znaky)); }
+                ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
+                if (CardCountInHand(player2Hand) < lastCardCount) {
+                    if (topmostCardOnDiscardPile % 8 == 0) { DrawCard(drawingStack, player1Hand, 2); canPlayer2Play = false; } else if (topmostCardOnDiscardPile % 8 == 7) { canPlayer2Play = false; } else if (topmostCardOnDiscardPile % 8 == 5) { topmostCardOnDiscardPile = (UserJokerSelection(symbols)); }
                 }
                 Console.Clear();
-                VypisStolu(kartanastole, balicek_karet, hrac1_ruka, hrac2_ruka, lizaci_balicek, vyska, sirka, znaky, pozicekurzoru, odhazovaci_balicek);
-                muzehrathrac1 = true;
+                WriteCanvas(topmostCardOnDiscardPile, cardDefinitions, player1Hand, player2Hand, drawingStack, height, width, symbols, cursorPos, discardPile);
+                canPlayer1Play = true;
 
 
 
-                if (PocetKaretVRuce(hrac2_ruka) != 0 && muzehrathrac2) {
-                    Thread.Sleep(rychlosthrani);
+                if (CardCountInHand(player2Hand) != 0 && canPlayer2Play) {
+                    Thread.Sleep(playingSpeed);
 
-                    predtimkaret = PocetKaretVRuce(hrac1_ruka);
-                    for (int i = 0; i < PocetKaretVRuce(hrac1_ruka) * 2; i++) {
-                        nahodnakarta = random.Next(0, PocetKaretVRuce(hrac1_ruka));
-                        if (MohuZahratKartu(kartanastole, JakaKartaJeOznacena(hrac1_ruka, nahodnakarta))) {
-                            PokudJePotrebaMichej(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                            kartanastole = JakaKartaJeOznacena(hrac1_ruka, nahodnakarta);
-                            odhazovaci_balicek[JakaKartaJeOznacena(hrac1_ruka, nahodnakarta)] = 1;
-                            hrac1_ruka[JakaKartaJeOznacena(hrac1_ruka, nahodnakarta)] = 0;
-                            if (kartanastole % 8 == 0) { LizniKartu(lizaci_balicek, hrac2_ruka, 2); muzehrathrac1 = false; } else if (kartanastole % 8 == 7) { muzehrathrac1 = false; } else if (kartanastole % 8 == 5) { kartanastole = VyberKartyProPc(hrac1_ruka); }
+                    lastCardCount = CardCountInHand(player1Hand);
+                    for (int i = 0; i < CardCountInHand(player1Hand) * 2; i++) {
+                        randomCardPos = random.Next(0, CardCountInHand(player1Hand));
+                        if (CanDiscardCard(topmostCardOnDiscardPile, WhichCardIsSelected(player1Hand, randomCardPos))) {
+                            ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
+                            topmostCardOnDiscardPile = WhichCardIsSelected(player1Hand, randomCardPos);
+                            discardPile[WhichCardIsSelected(player1Hand, randomCardPos)] = 1;
+                            player1Hand[WhichCardIsSelected(player1Hand, randomCardPos)] = 0;
+                            if (topmostCardOnDiscardPile % 8 == 0) { DrawCard(drawingStack, player2Hand, 2); canPlayer1Play = false; } else if (topmostCardOnDiscardPile % 8 == 7) { canPlayer1Play = false; } else if (topmostCardOnDiscardPile % 8 == 5) { topmostCardOnDiscardPile = PcJokerSelection(player1Hand); }
                             break;
                         }
                     }
-                    if (predtimkaret == PocetKaretVRuce(hrac1_ruka)) {
-                        PokudJePotrebaMichej(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                        LizniKartu(lizaci_balicek, hrac1_ruka, 1);
+                    if (lastCardCount == CardCountInHand(player1Hand)) {
+                        ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
+                        DrawCard(drawingStack, player1Hand, 1);
                     }
                     Console.Clear();
-                    VypisStolu(kartanastole, balicek_karet, hrac1_ruka, hrac2_ruka, lizaci_balicek, vyska, sirka, znaky, pozicekurzoru, odhazovaci_balicek);
+                    WriteCanvas(topmostCardOnDiscardPile, cardDefinitions, player1Hand, player2Hand, drawingStack, height, width, symbols, cursorPos, discardPile);
                 }
-                muzehrathrac2 = true;
+                canPlayer2Play = true;
             }
 
-            EndingScreen(hrac2_ruka);
+            EndingScreen(player2Hand);
         }
 
         /// <summary>
@@ -121,10 +121,10 @@
         /// Prints the <paramref name="message"/> if specified.
         /// Waits for space to be pressed and ends the program.
         /// </summary>
-        static void EndingScreen(int[] hrac2_ruka, string? message = null) {
+        static void EndingScreen(int[] player2Hand, string? message = null) {
             Console.WriteLine();
             if (message == null) {
-                if (hrac2_ruka.Sum() == 0) {
+                if (player2Hand.Sum() == 0) {
                     Console.WriteLine("You win!");
                 } else {
                     Console.WriteLine("You lose!");
@@ -137,181 +137,172 @@
             Environment.Exit(0);
         }
 
-        static string StvorKarty(int znak, int cislo, string[] znaky, int sirka, int vyska, bool vibrana_karta) {
-
-            string symbol;
-            if (cislo == 10) { symbol = "X"; } else if (cislo == 11) { symbol = "J"; } else if (cislo == 12) { symbol = "Q"; } else if (cislo == 13) { symbol = "K"; } else if (cislo == 14) { symbol = "A"; } else { symbol = "" + cislo; }
-
-
-            string karta = "";
-            if (vibrana_karta) {
-                karta += ("▄");
-                for (int x = 0; x < sirka; x++) { karta += ("▄"); }
-                karta += ("▄" + "\n");
+        static string CreateCard(int cardSymbolId, int cardNumber, string[] cardSymbols, int width, int height, bool selectedCard) {
+            Dictionary<int, string> cardNumberSymbolDict = new() {
+                {10, "X" },
+                {11, "J" },
+                {12, "Q" },
+                {13, "K" },
+                {14, "A" }
+            };
+            string cardSymbol = cardNumberSymbolDict.TryGetValue(cardNumber, out var symbol) ? symbol : cardNumber.ToString();
 
 
-                karta += ("█ " + symbol);
-                for (int x = 0; x < sirka - 2; x++) {
-                    karta += (" ");
+            string card = "";
+            if (selectedCard) {
+                card += ("▄");
+                for (int x = 0; x < width; x++) { card += ("▄"); }
+                card += ("▄" + "\n");
+
+
+                card += ("█ " + cardSymbol);
+                for (int x = 0; x < width - 2; x++) {
+                    card += (" ");
                 }
-                karta += ("█" + "\n");
+                card += ("█" + "\n");
 
 
-                for (int y = 0; y < vyska - 2; y++) {
-                    karta += ("█");
-                    for (int x = 0; x < sirka; x++) {
-                        if ((vyska - 2) / 2 == y && (sirka - 2) / 2 == x) { karta += znaky[znak]; x += 2; }
-                        karta += (" ");
+                for (int y = 0; y < height - 2; y++) {
+                    card += ("█");
+                    for (int x = 0; x < width; x++) {
+                        if ((height - 2) / 2 == y && (width - 2) / 2 == x) { card += cardSymbols[cardSymbolId]; x += 2; }
+                        card += (" ");
                     }
-                    karta += ("█" + "\n");
+                    card += ("█" + "\n");
                 }
-                karta += ("█");
+                card += ("█");
 
 
 
-                for (int x = 0; x < sirka - 2; x++) {
-                    karta += (" ");
+                for (int x = 0; x < width - 2; x++) {
+                    card += (" ");
                 }
-                karta += (symbol + " █" + "\n");
+                card += (cardSymbol + " █" + "\n");
 
 
 
-                karta += ("▀");
-                for (int x = 0; x < sirka; x++) { karta += ("▀"); }
-                karta += ("▀");
+                card += ("▀");
+                for (int x = 0; x < width; x++) { card += ("▀"); }
+                card += ("▀");
             } else {
-                karta += ("╔");
-                for (int x = 0; x < sirka; x++) { karta += ("═"); }
-                karta += ("╗" + "\n");
+                card += ("╔");
+                for (int x = 0; x < width; x++) { card += ("═"); }
+                card += ("╗" + "\n");
 
 
-                karta += ("║ " + symbol);
-                for (int x = 0; x < sirka - 2; x++) {
-                    karta += (" ");
+                card += ("║ " + cardSymbol);
+                for (int x = 0; x < width - 2; x++) {
+                    card += (" ");
                 }
-                karta += ("║" + "\n");
+                card += ("║" + "\n");
 
 
-                for (int y = 0; y < vyska - 2; y++) {
-                    karta += ("║");
-                    for (int x = 0; x < sirka; x++) {
-                        if ((vyska - 2) / 2 == y && (sirka - 2) / 2 == x) { karta += znaky[znak]; x += 2; }
-                        karta += (" ");
+                for (int y = 0; y < height - 2; y++) {
+                    card += ("║");
+                    for (int x = 0; x < width; x++) {
+                        if ((height - 2) / 2 == y && (width - 2) / 2 == x) { card += cardSymbols[cardSymbolId]; x += 2; }
+                        card += (" ");
                     }
-                    karta += ("║" + "\n");
+                    card += ("║" + "\n");
                 }
-                karta += ("║");
+                card += ("║");
 
 
 
-                for (int x = 0; x < sirka - 2; x++) {
-                    karta += (" ");
+                for (int x = 0; x < width - 2; x++) {
+                    card += (" ");
                 }
-                karta += (symbol + " ║" + "\n");
+                card += (cardSymbol + " ║" + "\n");
 
 
 
-                karta += ("╚");
-                for (int x = 0; x < sirka; x++) { karta += ("═"); }
-                karta += ("╝");
+                card += ("╚");
+                for (int x = 0; x < width; x++) { card += ("═"); }
+                card += ("╝");
             }
 
-            return (karta);
+            return (card);
 
         }
-        static int PocetKaretVRuce(int[] ruka) {
-            return ruka.Count(i => i == 1);
+        static int CardCountInHand(int[] cardsInHand) {
+            return cardsInHand.Count(i => i == 1);
         }
 
-        static string SpojDvaStringy(string prvni, string druhy) {
+        static string JoinMultilineStringsHorizontally(string firstString, string secondString) {
 
-            string[] castiA = prvni.Split('\n');
-            string[] castiB = druhy.Split('\n');
-            string spojeny = "";
-            for (int n = 0; n < castiA.Length; n++) {
-                spojeny += castiA[n] + castiB[n] + "\n";
+            string[] partsA = firstString.Split('\n');
+            string[] partsB = secondString.Split('\n');
+            string joined = "";
+            for (int n = 0; n < partsA.Length; n++) {
+                joined += partsA[n] + partsB[n] + "\n";
             }
 
-            return spojeny.Substring(0, spojeny.Length - 1);
+            return joined.Substring(0, joined.Length - 1);
         }
 
-        static void LizniKartu(int[] balicek_karet, int[] kartyhrace, int kolik) {
-            Random random = new Random();
-            int nahodnakarta = random.Next(0, balicek_karet.Length);
-            for (int n = 0; n < kolik && balicek_karet.Sum() != 0; n++) {
-                while (balicek_karet[nahodnakarta] == 0) { nahodnakarta = random.Next(0, balicek_karet.Length); }
-                balicek_karet[nahodnakarta] = 0;
-                kartyhrace[nahodnakarta] = 1;
-            }
-        }
-
-        static void PokudJePotrebaMichej(int[] lizaci_balicek, int[] odhazovaci_balicek, int kartanastole) {
-            if (lizaci_balicek.Sum() == 0) {
-                Array.Copy(odhazovaci_balicek, lizaci_balicek, odhazovaci_balicek.Length);
-                Array.Fill(odhazovaci_balicek, 0);
-                odhazovaci_balicek[kartanastole] = 1;
-                lizaci_balicek[kartanastole] = 0;
+        static void DrawCard(int[] drawingStack, int[] playerCards, int howManyToDraw) {
+            Random random = new();
+            int randomCard = random.Next(0, drawingStack.Length);
+            for (int n = 0; n < howManyToDraw && drawingStack.Sum() != 0; n++) {
+                while (drawingStack[randomCard] == 0) { randomCard = random.Next(0, drawingStack.Length); }
+                drawingStack[randomCard] = 0;
+                playerCards[randomCard] = 1;
             }
         }
 
-        static void VypisStolu(int kartanastole, int[] balicek_karet, int[] kartyhrace1, int[] kartyhrace2, int[] kartyvbalicku, int vyska, int sirka, string[] znaky, int pozicekurzoru, int[] odhazovaci_balicek) {
-
-
-
-            string jednakarta;
-            string ruka = "";
-            for (int n = 0; n <= vyska; n++) {
-                ruka += "\n";
+        static void ShuffleIfNeeded(int[] drawingStack, int[] discardPile, int topmostCardOnDiscardPile) {
+            if (drawingStack.Sum() == 0) {
+                Array.Copy(discardPile, drawingStack, discardPile.Length);
+                Array.Fill(discardPile, 0);
+                discardPile[topmostCardOnDiscardPile] = 1;
+                drawingStack[topmostCardOnDiscardPile] = 0;
             }
-            for (int n = 0; n < kartyhrace1.Length; n++) {
-                if (kartyhrace1[n] == 1) {
-                    //jednakarta = StvorKarty(balicek_karet[n * 2], balicek_karet[n * 2 + 1], znaky, sirka, vyska, false);
-                    jednakarta = StvorObracenouKartu(vyska, sirka);
-                    ruka = SpojDvaStringy(ruka, jednakarta);
+        }
+
+        static void WriteCanvas(int topmostCardOnDiscardPile, int[] cardDefinitions, int[] player1Hand, int[] player2Hand, int[] drawingStack, int height, int width, string[] symbols, int cursorPos, int[] discardPile) {
+            string singleCard;
+            string cardsInHandString = "";
+            for (int n = 0; n <= height; n++) {
+                cardsInHandString += "\n";
+            }
+            for (int n = 0; n < player1Hand.Length; n++) {
+                if (player1Hand[n] == 1) {
+                    //singleCard = CreateCard(cardDefinitions[n * 2], cardDefinitions[n * 2 + 1], symbols, width, height, false);
+                    singleCard = CreateCardFromBehind(height, width);
+                    cardsInHandString = JoinMultilineStringsHorizontally(cardsInHandString, singleCard);
                 }
             }
-            Console.WriteLine(ruka);
+            Console.WriteLine(cardsInHandString);
 
 
+            string stackRightBorder = "┐\n│\n│\n│\n│\n│\n│\n│\n┘";
+            string stackString = CreateCardFromBehind(7, 10);
 
-            int pocetkaret = 0;
-            for (int n = 0; n < kartyvbalicku.Length; n++) {
-                if (kartyvbalicku[n] == 1) { pocetkaret++; }
+            int cardStackHeightRatio = 4;
+
+            for (int n = 0; n < CardCountInHand(drawingStack) / cardStackHeightRatio; n++) { stackString = JoinMultilineStringsHorizontally(stackString, stackRightBorder); }
+            stackString = JoinMultilineStringsHorizontally(stackString, "  \n  \n  \n  \n  \n  \n  \n  \n  ");
+            string discardPileString = CreateCard(cardDefinitions[topmostCardOnDiscardPile * 2], cardDefinitions[topmostCardOnDiscardPile * 2 + 1], symbols, 10, stackRightBorder.Length / 2 - 1, false);
+            for (int n = 0; n < CardCountInHand(discardPile) / cardStackHeightRatio - 1; n++) { discardPileString = JoinMultilineStringsHorizontally(discardPileString, stackRightBorder); }
+            Console.WriteLine(JoinMultilineStringsHorizontally(stackString, discardPileString));
+
+
+            cardsInHandString = "";
+            for (int n = 0; cardsInHandString.Length <= height; n++) {
+                cardsInHandString += "\n";
             }
-            int pocetkaretnastolku = 0;
-            for (int n = 0; n < odhazovaci_balicek.Length; n++) {
-                if (odhazovaci_balicek[n] == 1) { pocetkaretnastolku++; }
-            }
-
-
-            string balicekstrana = "┐\n│\n│\n│\n│\n│\n│\n│\n┘";
-            string balicek = StvorObracenouKartu(7, 10);
-
-            int pomerbalicku = 4;
-
-            for (int n = 0; n < pocetkaret / pomerbalicku; n++) { balicek = SpojDvaStringy(balicek, balicekstrana); }
-            balicek = SpojDvaStringy(balicek, "  \n  \n  \n  \n  \n  \n  \n  \n  ");
-            string odhazovacibalicek = StvorKarty(balicek_karet[kartanastole * 2], balicek_karet[kartanastole * 2 + 1], znaky, 10, balicekstrana.Length / 2 - 1, false);
-            for (int n = 0; n < pocetkaretnastolku / pomerbalicku - 1; n++) { odhazovacibalicek = SpojDvaStringy(odhazovacibalicek, balicekstrana); }
-            Console.WriteLine(SpojDvaStringy(balicek, odhazovacibalicek));
-
-
-            ruka = "";
-            for (int n = 0; ruka.Length <= vyska; n++) {
-                ruka += "\n";
-            }
-            int kolikatakarta = 0;
-            for (int n = 0; n < kartyhrace2.Length; n++) {
-                if (kartyhrace2[n] == 1) {
-                    ruka = SpojDvaStringy(ruka, StvorKarty(balicek_karet[n * 2], balicek_karet[n * 2 + 1], znaky, sirka, vyska, pozicekurzoru == kolikatakarta));
-                    kolikatakarta++;
+            int ownedCardIndex = 0;
+            for (int n = 0; n < player2Hand.Length; n++) {
+                if (player2Hand[n] == 1) {
+                    cardsInHandString = JoinMultilineStringsHorizontally(cardsInHandString, CreateCard(cardDefinitions[n * 2], cardDefinitions[n * 2 + 1], symbols, width, height, cursorPos == ownedCardIndex));
+                    ownedCardIndex++;
                 }
             }
-            Console.WriteLine(ruka);
+            Console.WriteLine(cardsInHandString);
 
         }
 
-        static int[] NactiSipku(int pozicekurzoru, int pocetKvruce, int kartanastole, int[] balicek_karet, int[] kartyhrac, int[] lizaci_balicek, int[] odhazovaci_balicek) {
+        static int[] ReadKey(int pozicekurzoru, int pocetKvruce, int kartanastole, int[] balicek_karet, int[] kartyhrac, int[] lizaci_balicek, int[] odhazovaci_balicek) {
             ConsoleKey sipka = Console.ReadKey().Key;
             while (!((sipka == ConsoleKey.RightArrow && pozicekurzoru != pocetKvruce - 1) || (sipka == ConsoleKey.LeftArrow && pozicekurzoru != 0) || sipka == ConsoleKey.Enter || sipka == ConsoleKey.DownArrow)) {
                 Console.Write("\b \b");
@@ -319,118 +310,115 @@
 
             }
             if (sipka == ConsoleKey.LeftArrow) { return new int[] { pozicekurzoru - 1, kartanastole }; } else if (sipka == ConsoleKey.RightArrow) { return new int[] { pozicekurzoru + 1, kartanastole }; } else if (sipka == ConsoleKey.Enter) {
-                if (MohuZahratKartu(kartanastole, JakaKartaJeOznacena(kartyhrac, pozicekurzoru))) {
-                    kartanastole = JakaKartaJeOznacena(kartyhrac, pozicekurzoru);
-                    odhazovaci_balicek[(JakaKartaJeOznacena(kartyhrac, pozicekurzoru))] = 1;
-                    kartyhrac[JakaKartaJeOznacena(kartyhrac, pozicekurzoru)] = 0;
+                if (CanDiscardCard(kartanastole, WhichCardIsSelected(kartyhrac, pozicekurzoru))) {
+                    kartanastole = WhichCardIsSelected(kartyhrac, pozicekurzoru);
+                    odhazovaci_balicek[(WhichCardIsSelected(kartyhrac, pozicekurzoru))] = 1;
+                    kartyhrac[WhichCardIsSelected(kartyhrac, pozicekurzoru)] = 0;
                     if (pozicekurzoru != 0) {
                         pozicekurzoru--;
                     }
-
-
                 }
                 return new int[] { pozicekurzoru, kartanastole };
             } else if (sipka == ConsoleKey.DownArrow) {
-                PokudJePotrebaMichej(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                LizniKartu(lizaci_balicek, kartyhrac, 1);
+                ShuffleIfNeeded(lizaci_balicek, odhazovaci_balicek, kartanastole);
+                DrawCard(lizaci_balicek, kartyhrac, 1);
                 return new int[] { pozicekurzoru, kartanastole };
             } else { return new int[] { pozicekurzoru, kartanastole }; }
 
         }
 
-        static bool MohuZahratKartu(int kartanastole, int hranakarta) {
-            if (hranakarta % 8 == 5) { return true; }
-            if (hranakarta % 8 == kartanastole % 8) { return true; }
-            if (hranakarta / 8 == kartanastole / 8) { return true; } else { return false; }
+        static bool CanDiscardCard(int topmostCardOnDiscardPile, int cardToTryToPlace) {
+            if (cardToTryToPlace % 8 == 5) { return true; }
+            if (cardToTryToPlace % 8 == topmostCardOnDiscardPile % 8) { return true; }
+            if (cardToTryToPlace / 8 == topmostCardOnDiscardPile / 8) { return true; } else { return false; }
 
         }
 
-        static int JakaKartaJeOznacena(int[] kartyhrace, int pozicekurzoru) {
-            int vysledek = 0;
-            pozicekurzoru++;
-            for (int n = 0; pozicekurzoru != 0; n++) {
-                vysledek = n;
-                if (kartyhrace[n] == 1) { pozicekurzoru--; }
+        static int WhichCardIsSelected(int[] playersCards, int cursorPosition) {
+            int result = 0;
+            cursorPosition++;
+            for (int n = 0; cursorPosition != 0; n++) {
+                result = n;
+                if (playersCards[n] == 1) { cursorPosition--; }
             }
-            return vysledek;
+            return result;
         }
 
-        static int VyberKartyProHrace(string[] znaky) {
-            int vyskamenice = 3;
-            int sirkamenice = 4;
-            int pozicekurzoru = 0;
-            string vyberumenice = "";
-            for (int n = 0; n < vyskamenice; n++) {
+        /// <summary>
+        /// Joker / converter - the card that changes the card "color"
+        /// </summary>
+        static int UserJokerSelection(string[] znaky) {
+            int jokerHeight = 3;
+            int jokerWidth = 4;
+            int cursorPos = 0;
+            string jokerCardsString = "";
+            for (int n = 0; n < jokerHeight; n++) {
                 Console.WriteLine("\n");
             }
-            ConsoleKey sipka = ConsoleKey.E;
-            while (sipka != ConsoleKey.Enter) {
-                for (int n = 0; vyberumenice.Length <= vyskamenice; n++) {
-                    vyberumenice += "\n";
+            ConsoleKey arrow = new();
+            while (arrow != ConsoleKey.Enter) {
+                for (int n = 0; jokerCardsString.Length <= jokerHeight; n++) {
+                    jokerCardsString += "\n";
                 }
                 for (int n = 0; n < znaky.Length; n++) {
-                    vyberumenice = SpojDvaStringy(vyberumenice, StvorKarty(n, 5 + 7, znaky, sirkamenice, vyskamenice, n == pozicekurzoru));
+                    jokerCardsString = JoinMultilineStringsHorizontally(jokerCardsString, CreateCard(n, 5 + 7, znaky, jokerWidth, jokerHeight, n == cursorPos));
                 }
-                Console.CursorTop -= sirkamenice + 1;
+                Console.CursorTop -= jokerWidth + 1;
                 Console.CursorLeft = 0;
-                Console.WriteLine(vyberumenice);
-                vyberumenice = "";
-                sipka = Console.ReadKey().Key;
-                while (!((sipka == ConsoleKey.RightArrow && pozicekurzoru != 4 - 1) || (sipka == ConsoleKey.LeftArrow && pozicekurzoru != 0) || sipka == ConsoleKey.Enter)) {
+                Console.WriteLine(jokerCardsString);
+                jokerCardsString = "";
+                arrow = Console.ReadKey().Key;
+                while (!((arrow == ConsoleKey.RightArrow && cursorPos != 4 - 1) || (arrow == ConsoleKey.LeftArrow && cursorPos != 0) || arrow == ConsoleKey.Enter)) {
                     Console.Write("\b \b");
-                    sipka = Console.ReadKey().Key;
+                    arrow = Console.ReadKey().Key;
 
                 }
-                if (sipka == ConsoleKey.LeftArrow) { pozicekurzoru--; } else if (sipka == ConsoleKey.RightArrow) { pozicekurzoru++; }
+                if (arrow == ConsoleKey.LeftArrow) { cursorPos--; } else if (arrow == ConsoleKey.RightArrow) { cursorPos++; }
             }
 
 
-            return (pozicekurzoru * 8 + 5);
+            return (cursorPos * 8 + 5);
         }
 
-
-        static int VyberKartyProPc(int[] rukahracepole) {
-            int nejveci = 0;
-            int kolikmanejveci = 0;
-            int kolikmaaktualni = 0;
-            for (int znak = 0; znak < 4; znak++) {
-                for (int cislo = 0; cislo < 8; cislo++) {
-                    if (rukahracepole[znak * 8 + cislo] == 1 && cislo != 5) { kolikmaaktualni++; }
+        static int PcJokerSelection(int[] cardsInHand) {
+            int biggest = 0;
+            int whichColorHasTheMostCards = 0;
+            int howManyCardsOfSpecificColor = 0;
+            for (int symbol = 0; symbol < 4; symbol++) {
+                for (int i = 0; i < 8; i++) {
+                    if (cardsInHand[symbol * 8 + i] == 1 && i != 5) { howManyCardsOfSpecificColor++; }
                 }
-                if (kolikmanejveci < kolikmaaktualni) {
-                    kolikmanejveci = kolikmaaktualni;
-                    nejveci = znak;
+                if (whichColorHasTheMostCards < howManyCardsOfSpecificColor) {
+                    whichColorHasTheMostCards = howManyCardsOfSpecificColor;
+                    biggest = symbol;
                 }
 
             }
-            return (nejveci * 8 + 5);
+            return (biggest * 8 + 5);
         }
 
-        static string StvorObracenouKartu(int vyska, int sirka) {
-            string karta = "";
-            karta += "┌";
-            for (int i = 0; i < sirka; i++) {
-                karta += "─";
+        static string CreateCardFromBehind(int height, int width) {
+            string cardString = "";
+            cardString += "┌";
+            for (int i = 0; i < width; i++) {
+                cardString += "─";
             }
-            karta += "┐\n";
+            cardString += "┐\n";
 
-            for (int i = 0; i < vyska; i++) {
-                karta += "│";
-                for (int n = 0; n < sirka; n++) {
-                    karta += "╳";
+            for (int i = 0; i < height; i++) {
+                cardString += "│";
+                for (int n = 0; n < width; n++) {
+                    cardString += "╳";
                 }
-                karta += "│\n";
+                cardString += "│\n";
             }
-            karta += "└";
-            for (int i = 0; i < sirka; i++) {
-                karta += "─";
+            cardString += "└";
+            for (int i = 0; i < width; i++) {
+                cardString += "─";
             }
-            karta += "┘";
+            cardString += "┘";
 
-            return (karta);
-
-
+            return (cardString);
         }
-
     }
 }

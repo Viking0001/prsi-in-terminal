@@ -1,5 +1,5 @@
 # prsi-in-terminal
-README in 🇨🇿 --> [READMECZ](https://github.com/Viking0001/prsi-v-terminalu/blob/main/READMECZ.md)
+README in 🇨🇿 --> [README_CZ](https://github.com/Viking0001/prsi-v-terminalu/blob/main/README_CZ.md)
 
 ### How to play
  - Run Program.cs in VS or download the latest file from [releases](https://github.com/Viking0001/prsi-v-terminalu/releases/latest)
