@@ -1,4 +1,5 @@
 # prsi-in-terminal
+cz README --> [READMECZ](https://github.com/Viking0001/prsi-v-terminalu/blob/main/READMECZ.md)
 
 ### How to play
  - Run in VS Program.cs or download the latest file from [releases](https://github.com/Viking0001/prsi-v-terminalu/releases/latest)
