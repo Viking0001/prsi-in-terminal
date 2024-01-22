@@ -116,6 +116,11 @@
             EndingScreen(hrac2_ruka);
         }
 
+        /// <summary>
+        /// Automatically prints the game result when no <paramref name="message"/> specified.
+        /// Prints the <paramref name="message"/> if specified.
+        /// Waits for space to be pressed and ends the program.
+        /// </summary>
         static void EndingScreen(int[] hrac2_ruka, string? message = null) {
             Console.WriteLine();
             if (message == null) {
