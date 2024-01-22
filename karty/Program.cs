@@ -1,6 +1,36 @@
 ﻿namespace karty {
     internal class Program {
+        const string VERSION = "v0.0.4";
         static void Main(string[] args) {
+            Console.Title = $"prsi-in-terminal @ {VERSION}";
+
+            // Welcome screen
+            Console.Write(@"
+Welcome to prsi-in-terminal!
+
+Controls:
+    Left / Right arrow - select a card
+    Down arrow - draw a card
+    Enter - play the selected card
+
+Other info:
+    Drawing a card and playing a card adds to the total count of your moves.
+
+
+Press any key to continue . . . ".TrimStart());
+
+            Console.ReadKey(true);
+            Console.Clear();
+
+            while (true) {
+                Console.Clear();
+                Console.CursorVisible = false;
+                if (MainLoop()) break; // break out of the main loop if the user requests it
+            }
+            Environment.Exit(0);
+        }
+
+        static bool MainLoop() {
             Random random = new();
 
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -21,20 +51,6 @@
             └───────────┘┘┘┘
             */
 
-            // Welcome screen
-            Console.Write(@"Welcome to prsi-in-terminal!
-
-Controls:
-    Left / Right arrow - select card
-    Down arrow - draw a card
-    Enter - discard the selected card
-
-
-Press any key to continue ...");
-
-            Console.ReadKey(true);
-            Console.Clear();
-
             string[] symbols = { "❤️", "🍀", "🌰", "🎱" };
             int width = 10;   //10,8,4
             int height = 7;   //7 ,5,3
@@ -50,7 +66,8 @@ Press any key to continue ...");
             int[] drawingStack = Enumerable.Repeat(1, 32).ToArray();
             int[] discardPile = Enumerable.Repeat(0, 32).ToArray();
             int[] player1Hand = Enumerable.Repeat(0, 32).ToArray();
-            int[] player2Hand = Enumerable.Repeat(0, 32).ToArray();
+            int[] player2Hand = Enumerable.Repeat(0, 32).ToArray(); // the user
+            int player2MoveCount = 0;
             int topmostCardOnDiscardPile;
             int cursorPos = 0;
             int randomCardPos;
@@ -72,9 +89,6 @@ Press any key to continue ...");
 
             while (CardCountInHand(player1Hand) != 0 && CardCountInHand(player2Hand) != 0) {
                 if (CardCountInHand(player1Hand) > 10 || CardCountInHand(player2Hand) > 10) { width = 4; height = 3; } else if (CardCountInHand(player1Hand) > 5 || CardCountInHand(player2Hand) > 5) { width = 8; height = 5; } else { width = 10; height = 7; }
-
-
-
                 lastCardCount = CardCountInHand(player2Hand);
 
                 Console.Clear();
@@ -82,7 +96,7 @@ Press any key to continue ...");
                 while (CardCountInHand(player2Hand) == lastCardCount && canPlayer1Play) {
                     ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
                     lastCardCount = CardCountInHand(player2Hand);
-                    cursorAndCard = ReadKey(cursorPos, CardCountInHand(player2Hand), topmostCardOnDiscardPile, cardDefinitions, player2Hand, drawingStack, discardPile);
+                    cursorAndCard = ReadKey(cursorPos, CardCountInHand(player2Hand), topmostCardOnDiscardPile, cardDefinitions, player2Hand, drawingStack, discardPile, ref player2MoveCount);
                     cursorPos = cursorAndCard[0];
                     topmostCardOnDiscardPile = cursorAndCard[1];
                     Console.Clear();
@@ -96,8 +110,6 @@ Press any key to continue ...");
                 Console.Clear();
                 WriteCanvas(topmostCardOnDiscardPile, cardDefinitions, player1Hand, player2Hand, drawingStack, height, width, symbols, cursorPos, discardPile);
                 canPlayer1Play = true;
-
-
 
                 if (CardCountInHand(player2Hand) != 0 && canPlayer2Play) {
                     Thread.Sleep(playingSpeed);
@@ -123,29 +135,50 @@ Press any key to continue ...");
                 }
                 canPlayer2Play = true;
             }
-
-            EndingScreen(player2Hand);
+            Console.CursorVisible = true;
+            return EndingScreen(player2Hand, moveCount: player2MoveCount);
         }
 
         /// <summary>
-        /// Automatically prints the game result when no <paramref name="message"/> specified.
-        /// Prints the <paramref name="message"/> if specified.
+        /// Automatically prints the game result when no <paramref name="customMessage"/> specified.
+        /// Prints the <paramref name="customMessage"/> if specified.
         /// Waits for space to be pressed and ends the program.
         /// </summary>
-        static void EndingScreen(int[] player2Hand, string? message = null) {
+        /// <returns>
+        /// If the program should exit.
+        /// </returns>
+        static bool EndingScreen(int[] player2Hand, string? customMessage = null, int? moveCount = null) {
             Console.WriteLine();
-            if (message == null) {
-                if (player2Hand.Sum() == 0) {
-                    Console.WriteLine("You win!");
+            if (customMessage == null) {
+                if (player2Hand.Sum() == 0) { // if the user has no cards
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Write("You WIN!");
                 } else {
-                    Console.WriteLine("You lose!");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Write("You LOSE!");
                 }
+                Console.ResetColor();
+                Console.WriteLine(moveCount == null ? "" : $" (in {moveCount} moves)");
             } else {
-                Console.WriteLine(message);
+                Console.WriteLine(customMessage);
             }
-            Console.WriteLine("\nPress SPACE to exit");
-            while (Console.ReadKey(true).Key != ConsoleKey.Spacebar) { }
-            Environment.Exit(0);
+            Console.WriteLine("\nPress SPACE to play again.\nPress X to exit.");
+
+            bool pressedValidKey = false;
+            while (!pressedValidKey) {
+                char pressed = Console.ReadKey(true).KeyChar.ToString().ToLower().ToCharArray()[0];
+                pressedValidKey = true;
+                switch (pressed) {
+                    case 'x':
+                        return true;
+                    case ' ':
+                        break;
+                    default:
+                        pressedValidKey = false;
+                        break;
+                }
+            }
+            return false;
         }
 
         static string CreateCard(int cardSymbolId, int cardNumber, string[] cardSymbols, int width, int height, bool selectedCard) {
@@ -165,13 +198,11 @@ Press any key to continue ...");
                 for (int x = 0; x < width; x++) { card += ("▄"); }
                 card += ("▄" + "\n");
 
-
                 card += ("█ " + cardSymbol);
                 for (int x = 0; x < width - 2; x++) {
                     card += (" ");
                 }
                 card += ("█" + "\n");
-
 
                 for (int y = 0; y < height - 2; y++) {
                     card += ("█");
@@ -183,14 +214,10 @@ Press any key to continue ...");
                 }
                 card += ("█");
 
-
-
                 for (int x = 0; x < width - 2; x++) {
                     card += (" ");
                 }
                 card += (cardSymbol + " █" + "\n");
-
-
 
                 card += ("▀");
                 for (int x = 0; x < width; x++) { card += ("▀"); }
@@ -200,13 +227,11 @@ Press any key to continue ...");
                 for (int x = 0; x < width; x++) { card += ("═"); }
                 card += ("╗" + "\n");
 
-
                 card += ("║ " + cardSymbol);
                 for (int x = 0; x < width - 2; x++) {
                     card += (" ");
                 }
                 card += ("║" + "\n");
-
 
                 for (int y = 0; y < height - 2; y++) {
                     card += ("║");
@@ -218,29 +243,22 @@ Press any key to continue ...");
                 }
                 card += ("║");
 
-
-
                 for (int x = 0; x < width - 2; x++) {
                     card += (" ");
                 }
                 card += (cardSymbol + " ║" + "\n");
 
-
-
                 card += ("╚");
                 for (int x = 0; x < width; x++) { card += ("═"); }
                 card += ("╝");
             }
-
             return (card);
-
         }
         static int CardCountInHand(int[] cardsInHand) {
             return cardsInHand.Count(i => i == 1);
         }
 
         static string JoinMultilineStringsHorizontally(string firstString, string secondString) {
-
             string[] partsA = firstString.Split('\n');
             string[] partsB = secondString.Split('\n');
             string joined = "";
@@ -285,7 +303,6 @@ Press any key to continue ...");
             }
             Console.WriteLine(cardsInHandString);
 
-
             string stackRightBorder = "┐\n│\n│\n│\n│\n│\n│\n│\n┘";
             string stackString = CreateCardFromBehind(7, 10);
 
@@ -296,7 +313,6 @@ Press any key to continue ...");
             string discardPileString = CreateCard(cardDefinitions[topmostCardOnDiscardPile * 2], cardDefinitions[topmostCardOnDiscardPile * 2 + 1], symbols, 10, stackRightBorder.Length / 2 - 1, false);
             for (int n = 0; n < CardCountInHand(discardPile) / cardStackHeightRatio - 1; n++) { discardPileString = JoinMultilineStringsHorizontally(discardPileString, stackRightBorder); }
             Console.WriteLine(JoinMultilineStringsHorizontally(stackString, discardPileString));
-
 
             cardsInHandString = "";
             for (int n = 0; cardsInHandString.Length <= height; n++) {
@@ -310,47 +326,45 @@ Press any key to continue ...");
                 }
             }
             Console.WriteLine(cardsInHandString);
-
         }
 
-        static int[] ReadKey(int pozicekurzoru, int pocetKvruce, int kartanastole, int[] balicek_karet, int[] kartyhrac, int[] lizaci_balicek, int[] odhazovaci_balicek) {
-            ConsoleKey sipka = Console.ReadKey().Key;
-            while (!((sipka == ConsoleKey.RightArrow && pozicekurzoru != pocetKvruce - 1) || (sipka == ConsoleKey.LeftArrow && pozicekurzoru != 0) || sipka == ConsoleKey.Enter || sipka == ConsoleKey.DownArrow)) {
+        static int[] ReadKey(int cursorPos, int cardCountInHand, int topmostCardOnDiscardPile, int[] cardDefinitions, int[] playersCards, int[] drawingStack, int[] discardPile, ref int player2MoveCount) {
+            ConsoleKey arrow = Console.ReadKey().Key;
+            while (!((arrow == ConsoleKey.RightArrow && cursorPos != cardCountInHand - 1) || (arrow == ConsoleKey.LeftArrow && cursorPos != 0) || arrow == ConsoleKey.Enter || arrow == ConsoleKey.DownArrow)) {
                 Console.Write("\b \b");
-                sipka = Console.ReadKey().Key;
-
+                arrow = Console.ReadKey().Key;
             }
-            if (sipka == ConsoleKey.LeftArrow) { return new int[] { pozicekurzoru - 1, kartanastole }; } else if (sipka == ConsoleKey.RightArrow) { return new int[] { pozicekurzoru + 1, kartanastole }; } else if (sipka == ConsoleKey.Enter) {
-                if (CanDiscardCard(kartanastole, WhichCardIsSelected(kartyhrac, pozicekurzoru))) {
-                    kartanastole = WhichCardIsSelected(kartyhrac, pozicekurzoru);
-                    odhazovaci_balicek[(WhichCardIsSelected(kartyhrac, pozicekurzoru))] = 1;
-                    kartyhrac[WhichCardIsSelected(kartyhrac, pozicekurzoru)] = 0;
-                    if (pozicekurzoru != 0) {
-                        pozicekurzoru--;
+            if (arrow == ConsoleKey.LeftArrow) { return new int[] { cursorPos - 1, topmostCardOnDiscardPile }; } else if (arrow == ConsoleKey.RightArrow) { return new int[] { cursorPos + 1, topmostCardOnDiscardPile }; } else if (arrow == ConsoleKey.Enter) {
+                if (CanDiscardCard(topmostCardOnDiscardPile, WhichCardIsSelected(playersCards, cursorPos))) {
+                    player2MoveCount++;
+                    topmostCardOnDiscardPile = WhichCardIsSelected(playersCards, cursorPos);
+                    discardPile[(WhichCardIsSelected(playersCards, cursorPos))] = 1;
+                    playersCards[WhichCardIsSelected(playersCards, cursorPos)] = 0;
+                    if (cursorPos != 0) {
+                        cursorPos--;
                     }
                 }
-                return new int[] { pozicekurzoru, kartanastole };
-            } else if (sipka == ConsoleKey.DownArrow) {
-                ShuffleIfNeeded(lizaci_balicek, odhazovaci_balicek, kartanastole);
-                DrawCard(lizaci_balicek, kartyhrac, 1);
-                return new int[] { pozicekurzoru, kartanastole };
-            } else { return new int[] { pozicekurzoru, kartanastole }; }
-
+                return new int[] { cursorPos, topmostCardOnDiscardPile };
+            } else if (arrow == ConsoleKey.DownArrow) {
+                player2MoveCount++;
+                ShuffleIfNeeded(drawingStack, discardPile, topmostCardOnDiscardPile);
+                DrawCard(drawingStack, playersCards, 1);
+                return new int[] { cursorPos, topmostCardOnDiscardPile };
+            } else { return new int[] { cursorPos, topmostCardOnDiscardPile }; }
         }
 
         static bool CanDiscardCard(int topmostCardOnDiscardPile, int cardToTryToPlace) {
             if (cardToTryToPlace % 8 == 5) { return true; }
             if (cardToTryToPlace % 8 == topmostCardOnDiscardPile % 8) { return true; }
             if (cardToTryToPlace / 8 == topmostCardOnDiscardPile / 8) { return true; } else { return false; }
-
         }
 
-        static int WhichCardIsSelected(int[] playersCards, int cursorPosition) {
+        static int WhichCardIsSelected(int[] playersCards, int cursorPos) {
             int result = 0;
-            cursorPosition++;
-            for (int n = 0; cursorPosition != 0; n++) {
+            cursorPos++;
+            for (int n = 0; cursorPos != 0; n++) {
                 result = n;
-                if (playersCards[n] == 1) { cursorPosition--; }
+                if (playersCards[n] == 1) { cursorPos--; }
             }
             return result;
         }
@@ -386,8 +400,6 @@ Press any key to continue ...");
                 }
                 if (arrow == ConsoleKey.LeftArrow) { cursorPos--; } else if (arrow == ConsoleKey.RightArrow) { cursorPos++; }
             }
-
-
             return (cursorPos * 8 + 5);
         }
 
@@ -403,7 +415,6 @@ Press any key to continue ...");
                     whichColorHasTheMostCards = howManyCardsOfSpecificColor;
                     biggest = symbol;
                 }
-
             }
             return (biggest * 8 + 5);
         }
