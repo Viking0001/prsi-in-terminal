@@ -4,10 +4,10 @@
             Random random = new();
 
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            //0 - červené ♥
-            //1 - listy
-            //2 - žaludy
-            //3 - kule
+            //0 - ♥
+            //1 - 🍀
+            //2 - 🌰
+            //3 - 🎱
 
             /*
             ┌───────────┐┐┐┐
@@ -21,7 +21,18 @@
             └───────────┘┘┘┘
             */
 
+            // Welcome screen
+            Console.WriteLine(@"Welcome to prsi-in-terminal!
+Controls:
+    Left / Right arrow - select card
+    Down arrow - draw a card
+    Enter - discard the selected card
 
+
+Press any key to continue ...");
+
+            Console.ReadKey(true);
+            Console.Clear();
 
             string[] symbols = { "❤️", "🍀", "🌰", "🎱" };
             int width = 10;   //10,8,4
@@ -35,18 +46,17 @@
                 cardDefinitions[n * 2] = (n / 8);
                 cardDefinitions[n * 2 + 1] = (n % 8) + 7;
             }
-            int[] lizaci_balicek = Enumerable.Repeat(1, 32).ToArray();
-            int[] odhazovaci_balicek = Enumerable.Repeat(0, 32).ToArray();
-            int[] hrac1_ruka = Enumerable.Repeat(0, 32).ToArray();
-            int[] hrac2_ruka = Enumerable.Repeat(0, 32).ToArray();
-            int kartanastole;
-            int pozicekurzoru = 0;
-            int nahodnakarta;
-            nahodnakarta = random.Next(0, lizaci_balicek.Length);
-            while (lizaci_balicek[nahodnakarta] == 0) { nahodnakarta = random.Next(0, lizaci_balicek.Length); }
-            lizaci_balicek[nahodnakarta] = 0;
-            kartanastole = nahodnakarta;
-            odhazovaci_balicek[nahodnakarta] = 1;
+            int[] drawingStack = Enumerable.Repeat(1, 32).ToArray();
+            int[] discardPile = Enumerable.Repeat(0, 32).ToArray();
+            int[] player1Hand = Enumerable.Repeat(0, 32).ToArray();
+            int[] player2Hand = Enumerable.Repeat(0, 32).ToArray();
+            int topmostCardOnDiscardPile;
+            int cursorPos = 0;
+            int randomCardPos;
+            randomCardPos = random.Next(0, drawingStack.Length);
+            while (drawingStack[randomCardPos] == 0) { randomCardPos = random.Next(0, drawingStack.Length); }
+            drawingStack[randomCardPos] = 0;
+            topmostCardOnDiscardPile = randomCardPos;
             discardPile[randomCardPos] = 1;
 
             DrawCard(drawingStack, player1Hand, 4);
