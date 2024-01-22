@@ -1,8 +1,8 @@
 # prsi-in-terminal
-README in 🇨🇿 --> [README_CZ](https://github.com/Viking0001/prsi-v-terminalu/blob/main/README_CZ.md)
+README in 🇨🇿 --> [README_CZ](https://github.com/Viking0001/prsi-in-terminal/blob/main/README_CZ.md)
 
 ### How to play
- - Run Program.cs in VS or download the latest `.exe` file from [releases](https://github.com/Viking0001/prsi-v-terminalu/releases/latest)
+ - Run Program.cs in VS or download the latest `.exe` file from [releases](https://github.com/Viking0001/prsi-in-terminal/releases/latest)
  - [Instructions here](https://en.wikipedia.org/wiki/Mau-Mau_(card_game)#Czech_Republic)
 
 # Problems

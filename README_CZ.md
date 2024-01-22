@@ -1,7 +1,7 @@
-# prsi-v-terminalu
+# prsi-in-terminal
 
 ### Jak hrát
- -  Ve VS spustíte Program.cs nebo si stáhnete nejnovější `.exe` soubor z [releases](https://github.com/Viking0001/prsi-v-terminalu/releases/latest)
+ -  Ve VS spustíte Program.cs nebo si stáhnete nejnovější `.exe` soubor z [releases](https://github.com/Viking0001/prsi-in-terminal/releases/latest)
  -  [Návod je zde](https://cs.wikipedia.org/wiki/Pr%C5%A1%C3%AD#Pr.C5.AFb.C4.9Bh_hry)
 
 # Problémy
