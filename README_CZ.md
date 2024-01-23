@@ -1,4 +1,4 @@
-# prsi-v-terminale
+# prsi-in-terminal
 
 ### Jak hrát
  -  Ve VS spustíte Program.cs nebo si stáhnete nejnovější `.exe` soubor z [releases](https://github.com/Viking0001/prsi-in-terminal/releases/latest)
