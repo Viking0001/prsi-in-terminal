@@ -6,6 +6,6 @@ README in 🇨🇿 --> [README_CZ](https://github.com/Viking0001/prsi-in-termina
  - Tutorial/instructions: You can [watch a video](https://www.youtube.com/watch?v=i3dOZB-XJmM) *(recommended)* or [read on Wikipedia](https://en.wikipedia.org/wiki/Mau-Mau_(card_game)#Czech_Republic)
 
 ### Problems
- - If you can't lick a card or play, the game stops.
+ - If you can't draw a card or play a card, the game gets stuck.
 
 #### enjoy
